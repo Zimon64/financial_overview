@@ -2,7 +2,6 @@
 
 import sys
 import csv
-import json
 from typing import Dict, Any
 
 from PyQt6.QtCharts import (
