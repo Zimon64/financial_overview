@@ -1,8 +1,9 @@
+#!/usr/bin/env python
 # main.py
 
 import sys
 import csv
-from typing import Dict, Any
+from _datetime import datetime
 
 from PyQt6.QtCharts import (
     QChartView,
@@ -28,7 +29,8 @@ from PyQt6.QtWidgets import (
     QLabel,
     QTabBar,
     QSizePolicy,
-    QComboBox, QGraphicsSimpleTextItem
+    QComboBox,
+    QMessageBox
 )
 from PyQt6.QtCore import (
     Qt,
@@ -71,15 +73,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.chart_view)
         self.update_chart()
 
-        self.chart_layout = QHBoxLayout()
-        layout.addLayout(self.chart_layout)
-
-        self.create_bar_chart()
-
-        # chart of all tabs
-        self.all_tabs_chart_view = QChartView()
-        self.chart_layout.addWidget(self.chart_view)
-
         self.info_table = QTableWidget()
         self.info_table.setColumnCount(1)
         self.info_table.setHorizontalHeaderLabels(['Gesamte Finanzen'])
@@ -88,9 +81,19 @@ class MainWindow(QMainWindow):
         self.info_table.setVerticalHeaderLabels(['Einnahmen', 'Ausgaben', 'Verfügbar'])
         self.info_table.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.info_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.chart_layout = QHBoxLayout()
         self.chart_layout.addWidget(self.info_table)
 
+        # self.chart_layout = QHBoxLayout()
+        layout.addLayout(self.chart_layout)
+
+        # chart of all tabs
+        self.all_tabs_chart_view = QChartView()
+        self.chart_layout.addWidget(self.chart_view)
+
         make_table_non_editable(self.info_table)
+
+        self.create_bar_chart()
 
         self.all_chart()
 
@@ -105,6 +108,8 @@ class MainWindow(QMainWindow):
 
         # fixe Ausgaben anpassen
         self.monthly_conditions_change_button = QPushButton('Fixe Ausgaben/Einnahmen anpassen')
+        self.monthly_conditions_change_button.setToolTip('For automatically adding your fix in- and outcome for every year'
+                                                         'or custom month.')
         self.monthly_conditions_change_button.setStyleSheet('QPushButton {'
                                                   ' background-color: purple;'
                                                   '}'
@@ -129,8 +134,24 @@ class MainWindow(QMainWindow):
         update_button_layout = QHBoxLayout()
 
         self.update_button = QPushButton('&Update')
+        self.update_button.setToolTip('Only press when "Only bar chart" was pressed before.<br>'
+                                      'Otherwise the programm will crash!')
         self.update_button.clicked.connect(self.update_sum)
         update_button_layout.addWidget(self.update_button)
+
+        self.update_bar_chart_button = QPushButton('Only bar chart')
+        self.update_bar_chart_button.setToolTip('If the bar chart in this window no longer displays the names, you can'
+                                                ' use this option for better visibility or a broader overview.<br>'
+                                                '(automatically saves the table)')
+        self.update_bar_chart_button.setStyleSheet('QPushButton {'
+                                                    ' background-color: gray;'
+                                                    '}' 
+                                                    'QPushButton:pressed {'
+                                                    ' color: black;'
+                                                    '}')
+        self.update_bar_chart_button.clicked.connect(self.update_bar_chart)
+        self.update_bar_chart_button.clicked.connect(self.save)
+        update_button_layout.addWidget(self.update_bar_chart_button)
 
         self.actual_chart_button = QPushButton('&Actual Month')
         self.actual_chart_button.clicked.connect(self.update_chart)
@@ -168,6 +189,7 @@ class MainWindow(QMainWindow):
 
         # Button der neue Zeilen einfügt
         self.new_row_button = QPushButton('&New Row')
+        self.new_row_button.setToolTip('Adds new Row in the table.')
         self.new_row_button.setStyleSheet('QPushButton {'
                                                     ' background-color: rgb(0, 75, 0);'
                                                     '}'
@@ -202,7 +224,11 @@ class MainWindow(QMainWindow):
     # Balkendiagramm für MainWindow
     def create_bar_chart(self):
         #Erstellen eines dynamischen Datasets
-        file_path = 'financials_October 2024.csv'
+        current_month = datetime.now().strftime("%B")
+        current_year = datetime.now().strftime("%Y")
+        file_path = f'financials_{current_month} {current_year}.csv'
+        # file_path = 'financials_October 2024.csv'
+        print(file_path)
         # file_path = self.get_current_file_path()
         categories, summed_expenses = self.sum_of_unique_names(file_path)
 
@@ -231,7 +257,7 @@ class MainWindow(QMainWindow):
         # Create a chart and add the bar series to it
         chart = QChart()
         chart.addSeries(bar_series)
-        chart.setTitle("Monthly Expenses")
+        chart.setTitle(f"Monthly Expenses {current_month} {current_year}")
         chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
 
         # X-Achse und Y-Achse erzeugen
@@ -253,6 +279,7 @@ class MainWindow(QMainWindow):
 
         # Create a chart view and set the chart
         chart_view = QChartView(chart)
+        chart_view.setObjectName("barChartView")
         chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         # color of background and axis
@@ -273,7 +300,24 @@ class MainWindow(QMainWindow):
         #     chart.scene().addItem(text_item)
 
         # Add the chart view to your layout
-        self.chart_layout.addWidget(chart_view)
+        # self.chart_layout.addWidget(chart_view)
+
+        existing_chart = self.chart_layout.findChild(QChartView, "barChartView")
+        if existing_chart:
+            index = self.chart_layout.indexOf(existing_chart)
+            self.chart_layout.takeAt(index).widget().deleteLater()  # Remove the specific widget
+            self.chart_layout.insertWidget(index, chart_view)  # Insert the new widget in the same place
+        else:
+            self.chart_layout.addWidget(chart_view)
+
+    def update_bar_chart(self):
+        while self.chart_layout.count() > 0:
+            item = self.chart_layout.takeAt(0)
+            if item.widget():
+                item.widget().setVisible(False)
+
+        self.create_bar_chart()
+
 
     def get_current_file_path(self):
         current_tab_index = self.tab_widget.currentIndex()  # Aktuellen Tab-Index abrufen
@@ -288,7 +332,7 @@ class MainWindow(QMainWindow):
 
     def extract_unique_names_from_csv(self, file_path):
         unique_names = set()
-        with open(file_path, newline='', encoding='ISO-8859-1') as csvfile:
+        with open(file_path, newline='', encoding='utf-8') as csvfile:
             csvreader = csv.reader(csvfile)
             next(csvreader)
             for row in csvreader:
@@ -298,7 +342,7 @@ class MainWindow(QMainWindow):
 
     def sum_of_unique_names(self, file_path):
         sum_of_unique_expenses = {}
-        with open(file_path, newline='', encoding='ISO-8859-1') as csvfile:
+        with open(file_path, newline='', encoding='utf-8') as csvfile:
             csvreader = csv.reader(csvfile)
             next(csvreader)
 
@@ -319,21 +363,11 @@ class MainWindow(QMainWindow):
 
         categories = list(sum_of_unique_expenses.keys())
         expense_list = [sum_of_unique_expenses[name] for name in categories]
-        # print(expense_list)
-        # print(sum_of_unique_expenses)
-
-        # # für analyse des höchsten Wertes
-        # field_names = sum_of_unique_expenses.keys()
-        #
-        # with open('ausgaben.csv', 'w') as csvfile:
-        #     writer = csv.DictWriter(csvfile, fieldnames=field_names)
-        #     writer.writeheader()
-        #     writer.writerow(sum_of_unique_expenses)
 
         # max value of dic
         sorted_expenses = sorted(sum_of_unique_expenses.items(), key=lambda  x: x[1], reverse=True)
 
-        n = 6
+        n = 2
         nth_largest = sorted_expenses[n-1]
         print(f'{n}. größter Wert: {nth_largest}')
 
@@ -347,11 +381,35 @@ class MainWindow(QMainWindow):
         return 0
 
     def update_sum(self):
-        self.load_and_calculate()
+        # Clear all existing items in the chart layout
+        while self.chart_layout.count() > 0:
+            item = self.chart_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()  # Remove the widget properly
+            else:
+                item.layout().deleteLater()  # Remove any nested layouts
 
+        # Reload data and perform necessary calculations
+        self.load_and_calculate()
         self.load_all_tabs_financials()
 
+        # Re-add chart view and info table to the layout in the original order
+        self.chart_layout.addWidget(self.info_table)
+        self.chart_layout.addWidget(self.chart_view)
+
+        # Create and add the bar chart widget to the chart layout
+        bar_chart_widget = self.create_bar_chart()
+        self.chart_layout.addWidget(bar_chart_widget)
+
+        # Ensure visibility
+        self.info_table.setVisible(True)
+        self.chart_view.setVisible(True)
+
+        # Update the bar chart
         self.update_chart()
+
+        # Optionally, you could call create_bar_chart() if additional setup is needed
+        # self.create_bar_chart()
 
     def add_new_sheet(self):
         current_date = QDate.currentDate()
@@ -425,6 +483,7 @@ class MainWindow(QMainWindow):
 
     def save(self):
         save_to_csv(self.tab_widget, self.headers, 'financials')
+        # print('saved')
 
     def load(self):
         self.tab_widget.clear()
@@ -646,12 +705,27 @@ class SecondWindow(QDialog):
         self.populate_table()
         layout.addWidget(self.table)
 
-        self.add_row_button = QPushButton('Neue Zeile')
+        self.add_row_button = QPushButton('New Row')
+        self.add_row_button.setStyleSheet('QPushButton {'
+                                                            ' background-color: rgb(0, 100, 0);'
+                                                            '}'
+                                                            'QPushButton:pressed {'
+                                                            ' color: grey;'
+                                                            '}')
         self.add_row_button.clicked.connect(self.add_new_row)
         layout.addWidget(self.add_row_button)
 
-        self.setLayout(layout)
+        self.delete_row_button = QPushButton('Delete Last Row')
+        self.delete_row_button.setStyleSheet('QPushButton {'
+                                                            ' background-color: rgb(100, 0, 0);'
+                                                            '}'
+                                                            'QPushButton:pressed {'
+                                                            ' color: grey;'
+                                                            '}')
+        self.delete_row_button.clicked.connect(self.delete_last_row)
+        layout.addWidget(self.delete_row_button)
 
+        self.setLayout(layout)
         self.resize(1000, 400)
 
         self.show()
@@ -685,16 +759,21 @@ class SecondWindow(QDialog):
                 row_data.append(item.text() if item else '')
             data.append(row_data)
 
-        # Ursprünglich weil erste Zeile immer gelöscht wurde
-        # empty_row = [''] * self.table.columnCount()
-        # data.insert(0, empty_row)
-
         save_csv(self.file_name, data)
 
     def add_new_row(self):
         row_count = self.table.rowCount()
         self.table.insertRow(row_count)
         self.table.setItem(row_count, 0, QTableWidgetItem(''))
+
+    def delete_last_row(self):
+        # Check if the table has rows to delete
+        if self.table.rowCount() > 0:
+            # Remove the last row
+            self.table.removeRow(self.table.rowCount() - 1)
+        else:
+            # Optionally, display a message if there are no rows to delete
+            QMessageBox.information(self, "Info", "There are no rows to delete.")
 
 
 class Worksheets(QTableWidget):
