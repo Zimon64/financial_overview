@@ -4,6 +4,7 @@
 import sys
 import csv
 from _datetime import datetime
+from math import ceil
 
 from PyQt6.QtCharts import (
     QChartView,
@@ -45,15 +46,15 @@ from monthly_conditions import get_monthly_conditions, get_fixed_income_and_expe
 from utils import calculate_column_sum, set_table_item_with_alignment
 from ui_helpers import make_table_non_editable
 from data_handler import save_to_csv, load_from_csv
-from expense_bar_chart import ExpenseBarChart, get_expenses_by_category
 from second_window import load_csv, save_csv
-from bar_chart import ChartView
 
 
 class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+
+        self.all_charts = False
 
         self.second_window = None
         self.setWindowTitle('Finanzübersicht')
@@ -84,7 +85,6 @@ class MainWindow(QMainWindow):
         self.chart_layout = QHBoxLayout()
         self.chart_layout.addWidget(self.info_table)
 
-        # self.chart_layout = QHBoxLayout()
         layout.addLayout(self.chart_layout)
 
         # chart of all tabs
@@ -241,14 +241,9 @@ class MainWindow(QMainWindow):
         sorted_categories = [item[1] for item in sorted_items]  # Sortierte Kategorien
         sorted_expenses = [item[0] for item in sorted_items]  # Zuordnung der Ausgaben
 
-        # Debug-Outputs zur Überprüfung der Werte
-        # print(f'Sorted Categories: {sorted_categories}')  # Debug-Output
-        # print(f'Sorted Expenses: {sorted_expenses}')  # Debug-Output
-
         # Create a bar set with the sorted expenses
         bar_set = QBarSet("Expenses")
         bar_set.append(sorted_expenses)  # Füge die sortierten Ausgaben hinzu
-        # bar_set.append([30, 20, 30, 23, 20, 100, 69, 42, 25, 10, 3, 96, 55, 19, 60])
 
         # Create a bar series and add the bar set to it
         bar_series = QBarSeries()
@@ -260,10 +255,14 @@ class MainWindow(QMainWindow):
         chart.setTitle(f"Monthly Expenses {current_month} {current_year}")
         chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
 
+        # max y value of bar chart
+        max_y = ceil(max(sorted_expenses) / 10) * 10
+
         # X-Achse und Y-Achse erzeugen
         axis_x = QBarCategoryAxis()
         axis_x.append(sorted_categories)  # Setze die Labels der X-Achse
         axis_y = QValueAxis()  # Erstelle eine numerische Y-Achse
+        axis_y.setRange(0, max_y)
 
         # Setze die Achsen für das Diagramm
         chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
@@ -286,22 +285,6 @@ class MainWindow(QMainWindow):
         chart.setBackgroundBrush(QBrush(QColor(45, 45, 45)))
         chart.setTitleBrush(QBrush(QColor(255, 255, 255)))
 
-        # # Beschriftung der Balken
-        # for i, expense in enumerate(sorted_expenses):
-        #     text_item = QGraphicsSimpleTextItem(f'{expense:.0f}')
-        #     text_item.setFont(QFont('Arial', 10))
-        #     text_item.setBrush(QBrush(QColor(255, 255, 255)))
-        #
-        #     bar_width = bar_series.barSets()[0].count()
-        #     x_pos = chart.plotArea().left() + (i + 0.5) * (chart.plotArea().width() / bar_width)
-        #     y_pos = chart.plotArea().top() + (1 - (expense / max(sorted_expenses))) * chart.plotArea().height()
-        #
-        #     text_item.setPos(x_pos, y_pos)
-        #     chart.scene().addItem(text_item)
-
-        # Add the chart view to your layout
-        # self.chart_layout.addWidget(chart_view)
-
         existing_chart = self.chart_layout.findChild(QChartView, "barChartView")
         if existing_chart:
             index = self.chart_layout.indexOf(existing_chart)
@@ -317,6 +300,7 @@ class MainWindow(QMainWindow):
                 item.widget().setVisible(False)
 
         self.create_bar_chart()
+        self.all_charts = True
 
 
     def get_current_file_path(self):
@@ -381,35 +365,35 @@ class MainWindow(QMainWindow):
         return 0
 
     def update_sum(self):
-        # Clear all existing items in the chart layout
-        while self.chart_layout.count() > 0:
-            item = self.chart_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()  # Remove the widget properly
-            else:
-                item.layout().deleteLater()  # Remove any nested layouts
+        if self.all_charts:
+            # Clear all existing items in the chart layout
+            while self.chart_layout.count() > 0:
+                item = self.chart_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()  # Remove the widget properly
+                else:
+                    item.layout().deleteLater()  # Remove any nested layouts
+
+            # Re-add chart view and info table to the layout in the original order
+            self.chart_layout.addWidget(self.info_table)
+            self.chart_layout.addWidget(self.chart_view)
+
+            # Create and add the bar chart widget to the chart layout
+            bar_chart_widget = self.create_bar_chart()
+            self.chart_layout.addWidget(bar_chart_widget)
+
+            # Ensure visibility
+            self.info_table.setVisible(True)
+            self.chart_view.setVisible(True)
+
+            self.all_charts = False
 
         # Reload data and perform necessary calculations
         self.load_and_calculate()
         self.load_all_tabs_financials()
 
-        # Re-add chart view and info table to the layout in the original order
-        self.chart_layout.addWidget(self.info_table)
-        self.chart_layout.addWidget(self.chart_view)
-
-        # Create and add the bar chart widget to the chart layout
-        bar_chart_widget = self.create_bar_chart()
-        self.chart_layout.addWidget(bar_chart_widget)
-
-        # Ensure visibility
-        self.info_table.setVisible(True)
-        self.chart_view.setVisible(True)
-
         # Update the bar chart
         self.update_chart()
-
-        # Optionally, you could call create_bar_chart() if additional setup is needed
-        # self.create_bar_chart()
 
     def add_new_sheet(self):
         current_date = QDate.currentDate()
