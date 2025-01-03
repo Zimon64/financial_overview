@@ -3,6 +3,7 @@
 
 import sys
 import csv
+import os
 from _datetime import datetime
 from math import ceil
 
@@ -40,6 +41,7 @@ from PyQt6.QtCore import (
     QDate
 )
 from PyQt6.QtGui import QColor, QPainter, QBrush, QFont
+from dateutil.relativedelta import relativedelta
 
 from my_chart import MyChart
 from monthly_conditions import get_monthly_conditions, get_fixed_income_and_expenses
@@ -224,13 +226,23 @@ class MainWindow(QMainWindow):
     # Balkendiagramm für MainWindow
     def create_bar_chart(self):
         #Erstellen eines dynamischen Datasets
+        current_date = datetime.now()
         current_month = datetime.now().strftime("%B")
         current_year = datetime.now().strftime("%Y")
+        previous_month = current_date -relativedelta(months=1)
         file_path = f'financials_{current_month} {current_year}.csv'
         # file_path = 'financials_October 2024.csv'
-        print(file_path)
+        # print(file_path)
         # file_path = self.get_current_file_path()
-        categories, summed_expenses = self.sum_of_unique_names(file_path)
+
+        if os.path.exists(file_path):
+            categories, summed_expenses = self.sum_of_unique_names(file_path)
+        elif os.path.exists(f'financials_{previous_month.strftime("%B")} {current_year}.csv'):
+            file_path = f'financials_{previous_month.strftime('%B')} {current_year}.csv'
+            categories, summed_expenses = self.sum_of_unique_names(file_path)
+        else:
+            file_path = f'financials_{previous_month.strftime('%B')} {str(int(current_year) - 1)}.csv'
+            categories, summed_expenses = self.sum_of_unique_names(file_path)
 
         # Erstelle ein Dictionary für die Summen der Ausgaben
         expense_dict = dict(zip(categories, summed_expenses))
@@ -256,7 +268,10 @@ class MainWindow(QMainWindow):
         chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
 
         # max y value of bar chart
-        max_y = ceil(max(sorted_expenses) / 10) * 10
+        if sorted_expenses:
+            max_y = ceil(max(sorted_expenses) / 10) * 10
+        else:
+            max_y = 10
 
         # X-Achse und Y-Achse erzeugen
         axis_x = QBarCategoryAxis()
@@ -305,10 +320,10 @@ class MainWindow(QMainWindow):
 
     def get_current_file_path(self):
         current_tab_index = self.tab_widget.currentIndex()  # Aktuellen Tab-Index abrufen
-        print(current_tab_index)
+        # print(current_tab_index)
         sheet_name = self.tab_widget.tabText(current_tab_index)  # Tab-Text (Name des Blatts) abrufen
-        print('hi')
-        print(sheet_name)
+        # print('hi')
+        # print(sheet_name)
 
         # Erzeuge den Dateipfad basierend auf dem Blattnamen
         file_path = f"financials_{sheet_name}.csv"  # Beispiel: financials_Oktober 2024.csv
@@ -351,9 +366,9 @@ class MainWindow(QMainWindow):
         # max value of dic
         sorted_expenses = sorted(sum_of_unique_expenses.items(), key=lambda  x: x[1], reverse=True)
 
-        n = 2
-        nth_largest = sorted_expenses[n-1]
-        print(f'{n}. größter Wert: {nth_largest}')
+        # n = 2
+        # nth_largest = sorted_expenses[n-1]
+        # print(f'{n}. größter Wert: {nth_largest}')
 
         return expense_list, categories
 
@@ -440,6 +455,7 @@ class MainWindow(QMainWindow):
             lambda checked, index=tab_index: self.close_tab(index) if checked else None)
 
         save_to_csv(self.tab_widget, self.headers, 'financials')
+        print("Saving data to csv...")
         self.load()
 
         self.update_chart()
@@ -503,6 +519,7 @@ class MainWindow(QMainWindow):
         current_sheet_name = current_date.toString('MMMM yyyy')
 
         if not self.sheet_exists(current_sheet_name):
+            print('Creating new file...')
             self.add_new_sheet()
 
         self.load_and_calculate()
