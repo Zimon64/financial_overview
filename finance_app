@@ -1,0 +1,24 @@
+finance_app/
+│
+├── main.py                  # Entry point for the application
+├── main_window.py           # MainWindow class and UI setup
+├── charts/                  # Chart-related functionality
+│   ├── __init__.py
+│   ├── bar_chart.py         # Bar chart creation and updates
+│   └── pie_chart.py         # Pie chart creation and updates (if needed)
+│
+├── tables/                  # Table-related functionality
+│   ├── __init__.py
+│   ├── worksheets.py        # Worksheets class
+│   └── table_model.py       # TableModel class
+│
+├── utils/                   # Utility functions
+│   ├── __init__.py
+│   ├── file_handling.py     # CSV loading/saving functions
+│   ├── table_utils.py       # Table-related utility functions
+│   └── constants.py         # Constants (e.g., column indices, colors)
+│
+└── widgets/                 # Custom widgets
+    ├── __init__.py
+    └── tab_button.py        # TabButton class
+    

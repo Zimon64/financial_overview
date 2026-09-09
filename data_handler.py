@@ -23,9 +23,6 @@ def save_to_csv(tab_widget, headers, base_filename):
                         row_data.append(data)
                     writer.writerow(row_data)
 
-
-import chardet
-
 def detect_encoding(file_path):
     with open(file_path, 'rb') as f:
         result = chardet.detect(f.read())

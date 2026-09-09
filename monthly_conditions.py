@@ -28,18 +28,34 @@ def read_expense_amount_from_csv():
                    'December', 'Betrag(Dezember)']
 
         for row in reader:
-            if row[0]:
-                fixed_income.append((row[0], float(row[1])))
+            # 1. Überspringe die Header-Zeile oder zu kurze Zeilen
+            if not row or row[0] == 'Einkommen':
+                continue
 
-            if row[2]:
-                fixed_expenses.append((row[2], float(row[3])))
+            # 2. Einkommen verarbeiten
+            if len(row) > 1 and row[0].strip() and row[1].strip():
+                try:
+                    fixed_income.append((row[0], float(row[1])))
+                except ValueError:
+                    pass  # Falls da z.B. Text statt einer Zahl steht
 
+            # 3. Ausgaben verarbeiten
+            if len(row) > 3 and row[2].strip() and row[3].strip():
+                try:
+                    fixed_expenses.append((row[2], float(row[3])))
+                except ValueError:
+                    pass
+
+            # 4. Monatliche Ausgaben verarbeiten
             for i in range(4, len(row) - 1, 2):
-                month = headers[i]
-                if row[i]:
-                    if month not in monthly_expenses:
-                        monthly_expenses[month] = []
-                    monthly_expenses[month].append((row[i], float(row[i + 1])))
+                month = headers[i] if i < len(headers) else f"Month_{i}"
+                if row[i].strip() and row[i + 1].strip():
+                    try:
+                        if month not in monthly_expenses:
+                            monthly_expenses[month] = []
+                        monthly_expenses[month].append((row[i], float(row[i + 1])))
+                    except ValueError:
+                        pass
 
         # print("Monate in monthly_expenses:")
         # for month in monthly_expenses:
