@@ -1,9 +1,8 @@
-# monthly_conditions.py
 import csv
 import os.path
 
-csv_file = 'fixe_ausgabe.csv'
 
+csv_file = os.path.join('csv', 'fixe_ausgabe.csv')
 
 def create_empty_csv():
     with open(csv_file, 'w', newline='') as f:

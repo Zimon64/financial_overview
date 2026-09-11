@@ -1,4 +1,3 @@
-# my_chart.py
 from PyQt6.QtCharts import QChart, QPieSeries, QPieSlice
 from PyQt6.QtGui import QColor, QBrush
 from PyQt6.QtWidgets import QLabel

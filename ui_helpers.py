@@ -1,4 +1,3 @@
-# ui_helpers.py
 from PyQt6.QtWidgets import QTableWidget
 from PyQt6.QtCore import Qt
 

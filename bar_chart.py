@@ -1,9 +1,11 @@
+import os
+import csv
+import sys
+
 from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.QtCharts import QBarSet, QBarSeries, QChart, QChartView, QBarCategoryAxis, QValueAxis
 from PyQt6.QtGui import QPainter, QColor, QBrush, QFont
 from PyQt6.QtCore import Qt
-import csv
-import sys
 
 
 class SimpleBarChart(QMainWindow):

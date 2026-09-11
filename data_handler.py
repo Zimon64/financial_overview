@@ -1,7 +1,7 @@
-# data_handler.py
 import csv
 import os
 import chardet
+
 from datetime import datetime
 from PyQt6.QtWidgets import QTableWidget
 
@@ -11,7 +11,8 @@ def save_to_csv(tab_widget, headers, base_filename):
         tab = tab_widget.widget(i)
         if isinstance(tab, QTableWidget):
             sheet_name = tab_widget.tabText(i)
-            file_path = f'{base_filename}_{sheet_name}.csv'
+            os.makedirs('csv', exist_ok=True)
+            file_path = os.path.join('csv', f'{base_filename}_{sheet_name}.csv')
             with open(file_path, mode='w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(headers)
@@ -30,16 +31,23 @@ def detect_encoding(file_path):
 
 def load_from_csv(base_filename):
     tab_data = []
-    csv_files = [f for f in os.listdir() if f.startswith(base_filename) and f.endswith('.csv')]
+
+    data_dir = 'csv'
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    csv_files = [f for f in os.listdir(data_dir) if f.startswith(base_filename) and f.endswith('.csv')]
 
     csv_files.sort(key=lambda x: datetime.strptime(x.replace(base_filename + '_', '').replace('.csv', ''), '%B %Y'),
                    reverse=True)
 
     for csv_file in csv_files:
         sheet_name = os.path.splitext(csv_file)[0].replace(base_filename + '_', '')
-        encoding = detect_encoding(csv_file)
 
-        with open(csv_file, mode='r', newline='', encoding=encoding) as file:
+        file_path = os.path.join(data_dir, csv_file)
+        encoding = detect_encoding(file_path)
+
+        with open(file_path, mode='r', newline='', encoding=encoding) as file:
             reader = csv.reader(file)
             headers = next(reader, [])
             data = [row for row in reader]

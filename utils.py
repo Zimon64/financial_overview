@@ -1,4 +1,3 @@
-# utils.py
 from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtCore import Qt
 
