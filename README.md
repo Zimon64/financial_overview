@@ -38,4 +38,4 @@ financial_overview/
 1. Repository klonen oder herunterladen:
    ```bash
    git clone https://github.com/Zimon64/financial_overview.git
-   cd Finanzenübersichtyy
+   cd Finanzenübersicht
